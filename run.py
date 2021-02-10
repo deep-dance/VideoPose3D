@@ -740,11 +740,6 @@ if args.render:
         prediction_traj = evaluate(gen, return_predictions=True, use_trajectory_model=True)
         prediction += prediction_traj
 
-    if args.viz_export is not None:
-        print('Exporting joint positions to', args.viz_export)
-        # Predictions are in camera space
-        np.savez(args.viz_export, prediction)
-
     if args.viz_output is not None:
         if ground_truth is not None:
             # Reapply trajectory
@@ -767,6 +762,11 @@ if args.render:
             prediction = camera_to_world(prediction, R=rot, t=0)
             # We don't have the trajectory, but at least we can rebase the height
             prediction[:, :, 2] -= np.min(prediction[:, :, 2])
+
+        if args.viz_export is not None:
+            print('Exporting joint positions to', args.viz_export)
+            # Predictions are in camera space
+            np.savez(args.viz_export, prediction)
 
         anim_output = {'Reconstruction': prediction}
         if ground_truth is not None and not args.viz_no_ground_truth:
