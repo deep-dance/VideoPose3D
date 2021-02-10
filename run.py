@@ -763,10 +763,32 @@ if args.render:
             # We don't have the trajectory, but at least we can rebase the height
             prediction[:, :, 2] -= np.min(prediction[:, :, 2])
 
-        if args.viz_export is not None:
-            print('Exporting joint positions to', args.viz_export)
-            # Predictions are in camera space
-            np.savez(args.viz_export, prediction)
+    if args.viz_export is not None:
+        if ground_truth is not None:
+            # Reapply trajectory
+            trajectory = ground_truth[:, :1]
+            ground_truth[:, 1:] += trajectory
+            prediction += trajectory
+
+        # Invert camera transformation
+        cam = dataset.cameras()[args.viz_subject][args.viz_camera]
+        if ground_truth is not None:
+            prediction = camera_to_world(prediction, R=cam['orientation'], t=cam['translation'])
+            ground_truth = camera_to_world(ground_truth, R=cam['orientation'], t=cam['translation'])
+        else:
+            # If the ground truth is not available, take the camera extrinsic params from a random subject.
+            # They are almost the same, and anyway, we only need this for visualization purposes.
+            for subject in dataset.cameras():
+                if 'orientation' in dataset.cameras()[subject][args.viz_camera]:
+                    rot = dataset.cameras()[subject][args.viz_camera]['orientation']
+                    break
+            prediction = camera_to_world(prediction, R=rot, t=0)
+            # We don't have the trajectory, but at least we can rebase the height
+            prediction[:, :, 2] -= np.min(prediction[:, :, 2])
+
+        print('Exporting joint positions to', args.viz_export)
+        # Predictions are in camera space
+        np.savez(args.viz_export, prediction)
 
         anim_output = {'Reconstruction': prediction}
         if ground_truth is not None and not args.viz_no_ground_truth:
